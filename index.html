@@ -1,0 +1,112 @@
+<body>
+  <button onclick="speech()">Задать вопрос</button>
+  <p></p>
+
+  <style>
+    body {
+      background-color: #060b0f;
+    }
+    button, p {
+      position: relative;
+      top: 35vh;
+      width: 70%;
+      margin-left: 15%;
+      font-size: 5vh;
+    }
+    button {
+      height: 8vh;
+      background-color: #fd7526;
+      color: #060b0f;
+      border: none;
+      border-radius: 10px;
+      /* animation: button_anim 2s infinite; */
+    }
+    p {
+      color: #fd7526;
+    }
+    @media screen and (max-width: 800px){
+      button, p {
+        width: 100%;
+        margin-left: 0;
+      }
+      p {
+        font-size: 3vh;
+      }
+    }
+    @keyframes button_anim {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.2
+      }
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    // let apiKey = 'сюда надо подставить ваш api-ключ от OpenAI, а после - раскомментировать строку'
+    // ПЕРЕМЕННЫЕ
+    let button = window.document.querySelector('button');
+    let p = window.document.querySelector('p');
+    let conversation = [];
+    // Для распознавания речи
+    let speechRecognizer = new webkitSpeechRecognition();
+    // Для синтез речи
+    let speechSynthesis = window.speechSynthesis;
+    // ФУНКЦИИ
+    const speech = () => {
+      speechRecognizer.start();
+      button.innerText = 'Говорите';
+    }
+    const talk = (text) => {
+      let textToTalk = new SpeechSynthesisUtterance(text);
+      textToTalk.rate = 1.5;
+      textToTalk.pinch = 0.1;
+      speechSynthesis.speak(textToTalk);
+    }
+
+    // ИНТЕГРАЦИЯ С CHAT-GPT
+    let request = axios.create({
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    })
+    const requestFunc = () => {
+      if(p.innerText){
+        button.innerText = 'Отправка...';
+        button.style.animation = 'button_anim 2s infinite';
+        let message = {
+          "role": "user",
+          "content": `${p.innerText}`
+        }
+        conversation.push(message);
+        let params = {
+          "model": "gpt-3.5-turbo",
+          "messages": conversation
+        };
+        request.post('https://api.openai.com/v1/chat/completions', params)
+        .then(response => {
+          p.innerText = response.data.choices[0].message.content;
+          let gptMessage = {
+            "role": "assistant",
+            "content": `${p.innerText}`
+          }
+          conversation.push(gptMessage);
+          button.innerText = 'Задать вопрос';
+          button.style.animation = 'none';
+          talk(p.innerText);
+        });
+      }
+    }
+
+    // ОБРАБОТЧИКИ СОБЫТИЙ
+    speechRecognizer.onresult = (event) => {
+      p.innerText = event.results[0][0].transcript;
+      requestFunc();
+    }
+  </script>
+</body>
